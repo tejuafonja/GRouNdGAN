@@ -479,5 +479,5 @@ class CausalGAN(GAN):
 
             if should_run(save_feq):
                 self._save(output_dir)
-            print("done training step", self.step, flush=True)
+            print("stage2-done training step", self.step, flush=True)
             self.step += 1

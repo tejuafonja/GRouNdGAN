@@ -186,8 +186,7 @@ class CausalGANFactory(IGANFactory):
         # Modified, get pretrained CC model
         cc_pretrained_checkpoint = self.parser.get("EXPERIMENT", "cc_pretrained_checkpoint")
         if cc_pretrained_checkpoint is None:
-            cc_pretrained_checkpoint=self.parser.get("EXPERIMENT", "output directory")
-            + f"_CC/checkpoints/step_{self.parser.getint('CC Training', 'maximum steps')}.pth"
+            cc_pretrained_checkpoint=self.parser.get("EXPERIMENT", "output directory") + f"_CC/checkpoints/step_{self.parser.getint('CC Training', 'maximum steps')}.pth"
         # @Teju
         
         return CausalGAN(
@@ -211,7 +210,8 @@ class CausalGANFactory(IGANFactory):
 
     def get_trainer(self) -> typing.Callable:
         cc = self.get_cc()
-
+        cc_pretrained_checkpoint=self.parser.get("EXPERIMENT", "cc_pretrained_checkpoint")
+        
         # the following lambda will train the causal controller for maximum steps
         # specified in the CC Training section of the config file
         # after training the causal controller, the causal GAN will be instantiated
@@ -240,7 +240,7 @@ class CausalGANFactory(IGANFactory):
                 plt_freq=self.parser.getint("CC Logging", "plot frequency"),
                 save_feq=self.parser.getint("CC Logging", "save frequency"),
                 output_dir=self.parser.get("EXPERIMENT", "output directory") + "_CC",
-            ),
+            ) if cc_pretrained_checkpoint is None else None,
             self.get_gan().train(
                 train_files=self.parser.get("Data", "train"),
                 valid_files=self.parser.get("Data", "validation"),
