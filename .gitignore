@@ -43,3 +43,9 @@ data/
 # figures
 *.svg
 *.png
+
+venv
+activate.sh
+setup.sh
+modules.sh
+config.sh

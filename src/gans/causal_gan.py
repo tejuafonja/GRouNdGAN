@@ -116,10 +116,24 @@ class CausalGAN(GAN):
         # the number of genes and TFs are resolved by the causal generator during its instantiation
         self.labeler = Labeler(
             self.gen.num_genes, self.gen.num_tfs, self.labeler_layers
-        )
+        ).to(self.device)
+        
+        # self.labeler = Labeler(
+        #     self.gen.num_genes, self.gen.num_tfs, self.labeler_layers
+        # )
+        
         self.antilabeler = Labeler(
             self.gen.num_genes, self.gen.num_tfs, self.labeler_layers
-        )
+        ).to(self.device)
+        
+        # self.antilabeler = Labeler(
+        #     self.gen.num_genes, self.gen.num_tfs, self.labeler_layers
+        # )
+        
+        # comment by Teju; Fixed the error [1] by moving the model to self.device
+        # [1] RuntimeError: module must have its parameters and buffers on device cuda:0 (device_ids[0]) but found one of them on device: cpu
+        # This error seem to arise in PyTorch when using DataParallel to distribute your model across multiple GPUs.
+        
 
     def _save(self, path: typing.Union[str, bytes, os.PathLike]) -> None:
         """

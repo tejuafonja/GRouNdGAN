@@ -20,6 +20,8 @@ def create_GRN(cfg: ConfigParser) -> None:
     real_cells = sc.read_h5ad(cfg.get("Data", "train"))
     real_cells_val = sc.read_h5ad(cfg.get("Data", "validation"))
     real_cells_test = sc.read_h5ad(cfg.get("Data", "test"))
+    print(cfg.get("Data", "causal graph").replace(".pkl",".json"))
+    
 
     # find TFs that are in highly variable genes
     gene_names = real_cells.var_names.tolist()
@@ -89,6 +91,11 @@ def create_GRN(cfg: ConfigParser) -> None:
         ),
         sep="\n",
     )
+    
+    import json
+    print(cfg.get("Data", "causal graph").replace(".pkl",".json"))
+    print(causal_graph)
+    with open(cfg.get("Data", "causal graph").replace(".pkl",".json"), 'w') as f: json.dump({key:list(values) for key, values in causal_graph.items()}, f,  indent=4)
 
     gene_idx = real_cells.to_df().columns
     # convert gene names to numerical indices

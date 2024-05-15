@@ -45,6 +45,7 @@ class Labeler(nn.Module):
         torch.Tensor
             Tensor containing regulatory TFs.
         """
+        print(target_genes.device)
         return self._labeler(target_genes)
 
     def _create_labeler(self) -> None:
