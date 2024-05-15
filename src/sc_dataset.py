@@ -20,8 +20,7 @@ class SCDataset(Dataset):
         """
         self.data = sc.read_h5ad(path)
 
-        # self.cells = torch.from_numpy(self.data.X)
-        self.cells = torch.from_numpy(self.data.X.toarray())
+        self.cells = torch.from_numpy(self.data.X)
         self.clusters = torch.from_numpy(
             self.data.obs.cluster.to_numpy(dtype=int)
         )

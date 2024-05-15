@@ -48,6 +48,7 @@ venv
 activate.sh
 modules.sh
 config.sh
+setup.sh
 results*
 scripts/error*
 scripts/output*
