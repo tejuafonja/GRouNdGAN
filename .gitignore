@@ -51,3 +51,4 @@ config.sh
 results*
 scripts/error*
 scripts/output*
+configs/causal_gan_*

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=groundgan
+#SBATCH --job-name=groundgan-generate
 #SBATCH --time=24:00:00
 #SBATCH --account hai_fedak
 #SBATCH --partition booster
@@ -21,5 +21,6 @@ cd /p/project/hai_fedak/teju/GRouNdGAN
 # python src/main.py --config /p/project/hai_fedak/teju/GRouNdGAN/configs/causal_gan.cfg --preprocess --create_grn
 # python src/main.py --config /p/project/hai_fedak/teju/GRouNdGAN/configs/causal_gan.cfg --create_grn
 # tensorboard --logdir="/p/project/hai_fedak/teju/GRouNdGAN/results/GRouNdGAN/TensorBoard" --host 0.0.0.0 --load_fast false &
-srun --exclusive python src/main.py --config /p/project/hai_fedak/teju/GRouNdGAN/configs/causal_gan.cfg --train&
+# srun --exclusive python src/main.py --config /p/project/hai_fedak/teju/GRouNdGAN/configs/causal_gan.cfg --train&
+srun python src/main.py --config /p/project/hai_fedak/teju/GRouNdGAN/configs/causal_gan.cfg --generate&
 wait
