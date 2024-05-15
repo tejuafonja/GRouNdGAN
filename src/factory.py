@@ -182,7 +182,14 @@ class CausalGANFactory(IGANFactory):
     def get_gan(self) -> CausalGAN:
         with open(self.parser.get("Data", "causal graph"), "rb") as fp:
             causal_graph = pickle.load(fp)
-
+        
+        # Modified, get pretrained CC model
+        cc_pretrained_checkpoint = self.parser.get("EXPERIMENT", "cc_pretrained_checkpoint")
+        if cc_pretrained_checkpoint is None:
+            cc_pretrained_checkpoint=self.parser.get("EXPERIMENT", "output directory")
+            + f"_CC/checkpoints/step_{self.parser.getint('CC Training', 'maximum steps')}.pth"
+        # @Teju
+        
         return CausalGAN(
             genes_no=self.parser.getint("Data", "number of genes"),
             batch_size=self.parser.getint("Training", "batch size"),
@@ -192,8 +199,9 @@ class CausalGANFactory(IGANFactory):
             width_per_gene=self.parser.getint("Model", "width per gene"),
             cc_latent_dim=self.parser.getint("CC Model", "latent dim"),
             cc_layers=parse_list(self.parser["CC Model"]["generator layers"], int),
-            cc_pretrained_checkpoint=self.parser.get("EXPERIMENT", "output directory")
-            + f"_CC/checkpoints/step_{self.parser.getint('CC Training', 'maximum steps')}.pth",
+            # cc_pretrained_checkpoint=self.parser.get("EXPERIMENT", "output directory")
+            # + f"_CC/checkpoints/step_{self.parser.getint('CC Training', 'maximum steps')}.pth",
+            cc_pretrained_checkpoint=cc_pretrained_checkpoint,
             crit_layers=parse_list(self.parser["Model"]["critic layers"], int),
             causal_graph=causal_graph,
             labeler_layers=parse_list(self.parser["Model"]["labeler layers"], int),
