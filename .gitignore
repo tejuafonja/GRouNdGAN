@@ -43,3 +43,11 @@ data/
 # figures
 *.svg
 *.png
+
+venv
+activate.sh
+modules.sh
+config.sh
+results*
+scripts/error*
+scripts/output*
