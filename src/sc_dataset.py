@@ -4,7 +4,7 @@ import typing
 import scanpy as sc
 import torch
 from torch.utils.data import DataLoader, Dataset
-
+from scipy.sparse import issparse
 
 class SCDataset(Dataset):
     def __init__(self, path: typing.Union[str, bytes, os.PathLike]) -> None:
@@ -19,6 +19,9 @@ class SCDataset(Dataset):
             Path to the h5ad file.
         """
         self.data = sc.read_h5ad(path)
+        
+        if issparse(self.data.X):
+            self.data.X = self.data.X.toarray()
 
         self.cells = torch.from_numpy(self.data.X)
         self.clusters = torch.from_numpy(
