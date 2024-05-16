@@ -7,7 +7,7 @@ import scanpy as sc
 from arboreto.algo import grnboost2
 from tabulate import tabulate
 from scipy.sparse import issparse
-
+import os
 
 def create_GRN(cfg: ConfigParser) -> None:
     """
@@ -37,8 +37,9 @@ def create_GRN(cfg: ConfigParser) -> None:
 
     # we can optionally pass a list of TFs to GRNBoost2
     print(f"Using {len(TFs)} TFs for GRN inference.")
-    real_grn = grnboost2(real_cells_df, tf_names=TFs, verbose=True, seed=1)
-    real_grn.to_csv(cfg.get("GRN Preparation", "Inferred GRN"))
+    if not os.path.exists(cfg.get("GRN Preparation", "Inferred GRN")):
+        real_grn = grnboost2(real_cells_df, tf_names=TFs, verbose=True, seed=1)
+        real_grn.to_csv(cfg.get("GRN Preparation", "Inferred GRN"))
 
     # read GRN csv output, group TFs regulating genes, sort by importance
     real_grn = (
@@ -68,10 +69,14 @@ def create_GRN(cfg: ConfigParser) -> None:
     tfs = set(regulators)
 
     targets = set(causal_graph.keys())
-    genes = list(tfs | targets)
-
+    genes = sorted(list(tfs | targets))
+    # genes = list(tfs | targets)
+    # @teju: without sorting, there's no guarantee of reproducing the exact ordering of the list
+    # this is useful if you want to map from index back to gene name
+    
     # overwrite train, validation, and test datasets in case there some genes were excluded from the dataset
     real_cells = real_cells[:, genes]
+    
     real_cells.write_h5ad(cfg.get("Data", "train"))
     real_cells_val[:, genes].write_h5ad(cfg.get("Data", "validation"))
     real_cells_test[:, genes].write_h5ad(cfg.get("Data", "test"))
