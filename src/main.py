@@ -4,6 +4,11 @@ from __future__ import absolute_import
 import os
 import shutil
 
+import random
+import numpy as np
+import torch
+
+
 import numpy as np
 import scanpy as sc
 
@@ -21,6 +26,12 @@ if __name__ == "__main__":
 
     cfg_parser = get_configparser()
     cfg_parser.read(args.config)
+    
+    ### Random seed
+    random_seed=int(cfg_parser.get("EXPERIMENT", "random_seed"))
+    random.seed(random_seed)
+    torch.manual_seed(random_seed)
+    np.random.seed(random_seed)
 
     # copy the config file to the output dir
     output_dir = cfg_parser.get("EXPERIMENT", "output directory")
