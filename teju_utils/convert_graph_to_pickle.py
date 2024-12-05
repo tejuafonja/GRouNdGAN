@@ -27,3 +27,8 @@ with open(pickle_pth, "wb") as fp:
         pickle.dump(causal_graph, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
 # python convert_graph_to_pickle.py  data/processed/PBMC/causal_graph_TF10_GPT-0.json data/processed/PBMC/PBMC68k_train.h5ad 
+
+def load(json_pth):
+    with open(json_pth, 'r') as f: 
+        causal_graph=json.load(f)
+    return causal_graph
