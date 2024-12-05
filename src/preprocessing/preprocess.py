@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 from scipy.sparse import issparse
+import os
 
 
 def preprocess(cfg: ConfigParser) -> None:
@@ -24,9 +25,14 @@ def preprocess(cfg: ConfigParser) -> None:
 
     else:
         anndata = sc.read_h5ad(cfg.get("Preprocessing", "raw"))
-        
+
     if issparse(anndata.X):
         anndata.X = anndata.X.toarray()
+
+    print(anndata.shape)
+    
+    # create directory if not exist.
+    os.makedirs(os.path.dirname(cfg.get("Data", "train")), exist_ok=True)
 
     original_order = np.arange(anndata.n_obs)  # Store the original cell order
     np.random.shuffle(original_order)  # Shuffle the indices
@@ -36,7 +42,7 @@ def preprocess(cfg: ConfigParser) -> None:
 
     # clustering
     ann_clustered = anndata.copy()
-    sc.pp.recipe_zheng17(ann_clustered)
+    sc.pp.recipe_zheng17(ann_clustered,  n_top_genes=int(cfg.get("Preprocessing", "highly variable number")))
     sc.tl.pca(ann_clustered, n_comps=50)
     sc.pp.neighbors(ann_clustered, n_pcs=50)
     sc.tl.louvain(
@@ -106,4 +112,69 @@ def preprocess(cfg: ConfigParser) -> None:
     anndata[val_size : test_size + val_size].write_h5ad(cfg.get("Data", "test"))
     anndata[test_size + val_size :].write_h5ad(cfg.get("Data", "train"))
 
+    # Added by @teju because I encountered situation where after splitting there are some genes expressed in zero cells
+    # this especially happened in the bone marrow dataset
+    # Also helps to reduce the sparsity in the data
+    # random_numbers = np.arange(len(anndata))
+    # np.random.shuffle(random_numbers)
+
+    # validation_data = anndata[random_numbers[:val_size]]
+    # test_data = anndata[random_numbers[val_size : test_size + val_size]]
+    # train_data = anndata[random_numbers[test_size + val_size :]]
+
+    # maybe shuffling again is not needed since the anndata is already shuffled?
+    validation_data = anndata[:val_size]
+    test_data = anndata[val_size : test_size + val_size]
+    train_data = anndata[test_size + val_size :]
+
+    validation_data = filter_data_split(
+        validation_data,
+        min_cells=1,
+    )
+    test_data = filter_data_split(
+        test_data,
+        min_cells=1,
+    )
+    train_data = filter_data_split(
+        train_data,
+        min_cells=1,
+    )
+
+    smallest = np.inf
+    genes_to_keep = []
+    for i in [validation_data, test_data, train_data]:
+        if i.shape[1] < smallest:
+            smallest = i.shape[1]
+            genes_to_keep = i.var_names.tolist()
+
+    # filter out genes not present in other subset
+    genes_to_keep = [
+        i
+        for i in genes_to_keep
+        if i in validation_data.var_names
+        and i in test_data.var_names
+        and i in train_data.var_names
+    ]
+    
+    genes_to_keep = sorted(genes_to_keep)
+
+   
+
+    validation_data[:, genes_to_keep].write_h5ad(cfg.get("Data", "validation"))
+    test_data[:, genes_to_keep].write_h5ad(cfg.get("Data", "test"))
+    train_data[:, genes_to_keep].write_h5ad(cfg.get("Data", "train"))
+
+    print(f"Train Shape: {train_data[:, genes_to_keep].shape}")
+    print(f"Test Shape: {test_data[:, genes_to_keep].shape}")
+    print(f"Validation Shape: {validation_data[:, genes_to_keep].shape}")
+
+    ####
     print("Successfully preprocessed and and saved dataset")
+
+
+def filter_data_split(data, min_genes=1, min_cells=1):
+    # sc.pp.filter_cells(data, min_genes=min_genes)
+    sc.pp.filter_genes(data, min_cells=min_cells)
+    data.uns["cells_no"] = data.shape[0]
+    data.uns["genes_no"] = data.shape[1]
+    return data

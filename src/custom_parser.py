@@ -71,5 +71,21 @@ def get_argparser() -> argparse.ArgumentParser:
         action="store_true",
         help="Simulate single-cells RNA-seq data in-silico",
     )
+    
+    # @teju
+    optional.add_argument(
+        "--generate_cc",
+        required=False,
+        default=False,
+        action="store_true",
+        help="Simulate single-cells RNA-seq data in-silico for stage 1",
+    )
+    optional.add_argument(
+        "--grnboost2_exp_runs",
+        required=False,
+        default=False,
+        action="store_true",
+        help="Infer a GRN from preprocessed data using GRNBoost2 and appropriately format as causal graph - Run this for 5 different seeds",
+    )
 
     return parser

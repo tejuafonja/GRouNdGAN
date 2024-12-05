@@ -251,6 +251,9 @@ class GAN:
         np.ndarray
             Gene expression matrix of generated cells.
         """
+
+
+        # import pdb; pdb.set_trace()
         if checkpoint is not None:
             self._load(checkpoint)
 
@@ -276,7 +279,7 @@ class GAN:
         output_dir = path + "/checkpoints"
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
-
+        # import pdb; pdb.set_trace()
         torch.save(
             {
                 "step": self.step,
@@ -664,6 +667,8 @@ class GAN:
                 loader_gen = iter(loader)
                 real_cells, real_labels = next(loader_gen)
 
+            
+            
             real_cells = real_cells.to(self.device)
             real_labels = real_labels.flatten().to(self.device)
 

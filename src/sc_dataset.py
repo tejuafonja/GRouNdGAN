@@ -23,10 +23,21 @@ class SCDataset(Dataset):
         if issparse(self.data.X):
             self.data.X = self.data.X.toarray()
 
-        self.cells = torch.from_numpy(self.data.X)
-        self.clusters = torch.from_numpy(
-            self.data.obs.cluster.to_numpy(dtype=int)
-        )
+        
+        try:    
+            self.cells = torch.from_numpy(self.data.X)
+            self.clusters = torch.from_numpy(
+                self.data.obs.cluster.to_numpy(dtype=int)
+            )
+        except:
+            # added by teju
+            self.cells = torch.from_numpy(self.data.X.astype('float32'))
+            self.clusters = torch.from_numpy(
+                self.data.obs['RNA_snn_res.0.4'].to_numpy(dtype=int)
+            )
+            # 
+        # RNA_snn_res.0.4
+
 
     def __getitem__(self, index: int) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """

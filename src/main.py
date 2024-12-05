@@ -50,19 +50,78 @@ if __name__ == "__main__":
 
     if args.create_grn:
         grn_creation.create_GRN(cfg_parser)
-
+                    
     if args.train:
         fac.get_trainer()()
 
     if args.generate:
-        simulated_cells = fac.get_gan().generate_cells(
-            int(cfg_parser.get("Generation", "number of cells to generate")),
-            checkpoint=cfg_parser.get("EXPERIMENT", "checkpoint"),
-        )
+        n = int(cfg_parser.get("Generation", "number of times to generate"))
+        for i in range(n):
+            simulated_cells = fac.get_gan().generate_cells(
+                int(cfg_parser.get("Generation", "number of cells to generate")),
+                checkpoint=cfg_parser.get("EXPERIMENT", "checkpoint"),
+            )
 
-        simulated_cells = sc.AnnData(simulated_cells)
-        simulated_cells.obs_names = np.repeat("fake", simulated_cells.shape[0])
-        simulated_cells.obs_names_make_unique()
-        simulated_cells.write(
-            cfg_parser.get("EXPERIMENT", "output directory") + "/simulated.h5ad"
-        )
+            simulated_cells = sc.AnnData(simulated_cells)
+            simulated_cells.obs_names = np.repeat("fake", simulated_cells.shape[0])
+            simulated_cells.obs_names_make_unique()
+
+            # edited by teju
+            real_cells = sc.read_h5ad(cfg_parser.get("Data", "train"))
+            gene_names = real_cells.var_names.tolist()
+            simulated_cells.var_names=gene_names
+            
+            
+            try:
+                assert n == 1
+                import os
+                os.makedirs(os.path.dirname(cfg_parser.get("EXPERIMENT", "simulated path")), exist_ok=True)
+                simulated_cells.write(
+                    cfg_parser.get("EXPERIMENT", "simulated path")
+                )
+            except:
+                simulated_cells.write(
+                cfg_parser.get("EXPERIMENT", "output directory") + f"/simulated_{i}.h5ad"
+            )
+    
+    if args.generate_cc:
+        n = int(cfg_parser.get("Generation", "number of times to generate"))
+        for i in range(n):
+            simulated_cells = fac.get_cc().generate_cells(
+                int(cfg_parser.get("Generation", "number of cells to generate")),
+                checkpoint=cfg_parser.get("EXPERIMENT", "checkpoint"),
+            )
+
+            simulated_cells = sc.AnnData(simulated_cells)
+            simulated_cells.obs_names = np.repeat("fake", simulated_cells.shape[0])
+            simulated_cells.obs_names_make_unique()
+
+            # edited by teju
+            real_cells = sc.read_h5ad(cfg_parser.get("Data", "train"))
+            gene_names = real_cells.var_names.tolist()
+            simulated_cells.var_names=gene_names
+            
+            try:
+                assert n == 1
+                import os
+                os.makedirs(os.path.dirname(cfg_parser.get("EXPERIMENT", "simulated path")), exist_ok=True)
+                simulated_cells.write(
+                    cfg_parser.get("EXPERIMENT", "simulated path")
+                )
+            except:
+                simulated_cells.write(
+                cfg_parser.get("EXPERIMENT", "output directory") + f"_CC/simulated_{i}.h5ad"
+            )
+    
+    if args.grnboost2_exp_runs:
+        for new_seed in [1, 2, 3, 4, 5]:
+            old_seed = cfg_parser.get("GRN Preparation", "GRNBoost2 seed")
+            cfg_parser.set("GRN Preparation", "GRNBoost2 seed", f"{new_seed}")
+            
+            inferred_grn_pth = cfg_parser.get("GRN Preparation", "Inferred GRN").replace(f"_seed{old_seed}", f"_seed{new_seed}")
+            cfg_parser.set("GRN Preparation", "Inferred GRN", inferred_grn_pth)
+            
+            causal_graph_pth = cfg_parser.get("Data", "causal graph").replace(f"_seed{old_seed}", f"_seed{new_seed}")
+            cfg_parser.set("Data", "causal graph", causal_graph_pth)
+            
+            grn_creation.create_GRN(cfg_parser)
