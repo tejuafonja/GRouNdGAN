@@ -71,17 +71,15 @@ if __name__ == "__main__":
             gene_names = real_cells.var_names.tolist()
             simulated_cells.var_names=gene_names
             
-            
+            os.makedirs(os.path.dirname(cfg_parser.get("EXPERIMENT", "simulated path")), exist_ok=True)
             try:
-                assert n == 1
-                import os
-                os.makedirs(os.path.dirname(cfg_parser.get("EXPERIMENT", "simulated path")), exist_ok=True)
+                assert n == 1                
                 simulated_cells.write(
                     cfg_parser.get("EXPERIMENT", "simulated path")
                 )
             except:
                 simulated_cells.write(
-                cfg_parser.get("EXPERIMENT", "output directory") + f"/simulated_{i}.h5ad"
+                cfg_parser.get("EXPERIMENT", "simulated path").replace("simulated_trainsize.h5ad", f"simulated_{i}.h5ad")
             )
     
     if args.generate_cc:
@@ -100,17 +98,16 @@ if __name__ == "__main__":
             real_cells = sc.read_h5ad(cfg_parser.get("Data", "train"))
             gene_names = real_cells.var_names.tolist()
             simulated_cells.var_names=gene_names
-            
+
+            os.makedirs(os.path.dirname(cfg_parser.get("EXPERIMENT", "simulated path")), exist_ok=True)
             try:
                 assert n == 1
-                import os
-                os.makedirs(os.path.dirname(cfg_parser.get("EXPERIMENT", "simulated path")), exist_ok=True)
                 simulated_cells.write(
                     cfg_parser.get("EXPERIMENT", "simulated path")
                 )
             except:
                 simulated_cells.write(
-                cfg_parser.get("EXPERIMENT", "output directory") + f"_CC/simulated_{i}.h5ad"
+                cfg_parser.get("EXPERIMENT", "simulated path").replace("simulated_trainsize.h5ad", f"simulated_{i}.h5ad")
             )
     
     if args.grnboost2_exp_runs:
