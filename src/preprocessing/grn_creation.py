@@ -7,7 +7,7 @@ import scanpy as sc
 from arboreto.algo import grnboost2
 from tabulate import tabulate
 from scipy.sparse import issparse
-import os
+import os, random
 
 
 def create_GRN(cfg: ConfigParser) -> None:
@@ -28,6 +28,12 @@ def create_GRN(cfg: ConfigParser) -> None:
     TFs = pd.read_csv(cfg.get("GRN Preparation", "TFs"), sep="\t")["Symbol"]
     TFs = list(set(TFs).intersection(gene_names))
 
+    #@teju
+    if len(TFs) == 0:
+        TFs = pd.read_csv(cfg.get("GRN Preparation", "TFs"), sep="\t")["Ensembl"]
+        TFs = list(set(TFs).intersection(gene_names))
+
+
     if issparse(real_cells.X):
         real_cells.X = real_cells.X.toarray()
 
@@ -40,35 +46,65 @@ def create_GRN(cfg: ConfigParser) -> None:
     os.makedirs(os.path.dirname(cfg.get("GRN Preparation", "Inferred GRN")), exist_ok=True)
     os.makedirs(os.path.dirname(cfg.get("Data", "causal graph")), exist_ok=True)
 
+    seed = int(cfg.get("GRN Preparation", "GRNBoost2 seed"))
     if not os.path.exists(cfg.get("GRN Preparation", "Inferred GRN")):
-        seed = int(cfg.get("GRN Preparation", "GRNBoost2 seed"))
         real_grn = grnboost2(real_cells_df, tf_names=TFs, verbose=True, seed=seed)
         real_grn.to_csv(cfg.get("GRN Preparation", "Inferred GRN"))
 
-    # read GRN csv output, group TFs regulating genes, sort by importance
-    real_grn = (
-        pd.read_csv(cfg.get("GRN Preparation", "Inferred GRN"))
-        .sort_values("importance", ascending=False)
-        .astype(str)
-    )
+    
+    # @teju
+    try:
+        causal_inference_method = cfg.get("GRN Preparation", "causal_inference_method")
+    except:
+        causal_inference_method = None # default to 'grnb2'
+
+    if causal_inference_method == 'deep_sem':
+        real_grn = create_GRN_DeepSEM(cfg)
+    else:
+        # read GRN csv output, group TFs regulating genes, sort by importance
+        real_grn = (
+            pd.read_csv(cfg.get("GRN Preparation", "Inferred GRN"))
+            .sort_values("importance", ascending=False)
+            .astype(str)
+        )
+
+
     causal_graph = dict(real_grn.groupby("target")["TF"].apply(list))
 
     k = int(cfg.get("GRN Preparation", "k"))
-    causal_graph = {
+
+    # @teju
+    try:
+        sample_from = cfg.get("GRN Preparation", "sample_from")
+    except:
+        sample_from = None # default to 'top'
+
+    # @teju
+    if sample_from == 'bottom':
+        # @teju: Bottom tfs
+        causal_graph = {
+            gene: set(tfs[-k:])  # to sample the bottom k edges
+            for (gene, tfs) in causal_graph.items()
+        }
+    elif sample_from == 'random':
+        # @teju: Random tfs
+        random.seed(seed)
+        causal_graph_random = {}
+        for (gene, tfs) in causal_graph.items():
+            tfs_sfl = tfs[:] # to copy without mistakenly shuffling original list.
+            random.shuffle(tfs_sfl) # to sample the random k edges
+            causal_graph_random[gene] = set(tfs_sfl[:k])
+        causal_graph = causal_graph_random
+    else:
+        causal_graph = {
         gene: set(tfs[:k])  # to sample the top k edges
         # gene: set(tfs[0:10:2]) # sample even indices
         # gene: set(tfs[1:10:2]) # sample odd indices
         for (gene, tfs) in causal_graph.items()
     }
     
-    # Temporary to test bottom tfs
-    # causal_graph = {
-    #     gene: set(tfs[-k:])  # to sample the bottom k edges
-    #     # gene: set(tfs[0:10:2]) # sample even indices
-    #     # gene: set(tfs[1:10:2]) # sample odd indices
-    #     for (gene, tfs) in causal_graph.items()
-    # }
-    # 
+
+    
 
     # get gene, TF names
     regulators = list(chain.from_iterable(causal_graph.values()))
@@ -134,3 +170,16 @@ def create_GRN(cfg: ConfigParser) -> None:
     # save causal graph
     with open(cfg.get("Data", "causal graph"), "wb") as fp:
         pickle.dump(causal_graph, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def create_GRN_DeepSEM(cfg: ConfigParser) -> None:
+    # Find TFs that are in highly variable genes.
+    real_cells = sc.read_h5ad(cfg.get("Data", "train"))
+    gene_names = real_cells.var_names.tolist()
+    TFs = pd.read_csv(cfg.get("GRN Preparation", "TFs"), sep="\t")["Symbol"]
+    TFs = list(set(TFs).intersection(gene_names))
+
+
+    real_grn = pd.read_csv(cfg.get("GRN Preparation", "Inferred GRN"), ',')
+    real_grn = real_grn[real_grn.TF.isin(TFs)]
+    return real_grn
