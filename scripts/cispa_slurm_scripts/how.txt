@@ -1,0 +1,15 @@
+kinit -r 7d -l 24h
+
+To run iterative mode
+> srun -p vr0 --container-image=projects.cispa.saarland:5005#c01teaf/llm4grn:latest --pty bash
+
+To preprocess,
+
+python3.9 src/main.py --config configs/COVID_Haniffa21/CrossVal_1000/Stage1.cfg --preprocess
+
+create_grn
+python3.9 src/main.py --config configs/COVID_Haniffa21/CrossVal_1000/KB_Sapien/freq_None/Seed1/GRNB2.cfg --create_grn
+
+
+
+To train on slurm, use one of the scripts.

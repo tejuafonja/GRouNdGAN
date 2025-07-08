@@ -1,8 +1,8 @@
 #!/bin/bash
-# GPT4.1 GPT4 GRNB2_Bottom GRNB2_Random GRNB2 DeepSEM Llama
-for GRN in GRNB2_Bottom
+# GPT4.1 GPT4 GRNB2_Bottom GRNB2_Random GRNB2 DeepSEM Llama Llama_New
+for GRN in GRNB2
 do
-    for DATASET in PBMC
+    for DATASET in COVID_Haniffa21
     do
         for CV in 1000
         do

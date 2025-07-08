@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for DATASET in BoneMarrow PBMC PBMC_CTL
+for DATASET in COVID_Haniffa21-hvg1000
 do
     for CV in 1000
     do
