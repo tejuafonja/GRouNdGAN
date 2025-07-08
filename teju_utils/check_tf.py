@@ -21,6 +21,7 @@ real_cells = sc.read_h5ad(data_pth)
 gene_names = real_cells.var_names.tolist()
 TFS_gt = pd.read_csv(tf_pth, sep="\t")["Symbol"]
 TFS_gt = set(TFS_gt).intersection(gene_names)
+print(f"Total TFs (GT): {len(TFS_gt)}")
 
 # print(TFS_gt - TFS)
 assert len(TFS) == len(TFS_gt), 'TF length not equal to Ground-truth.'

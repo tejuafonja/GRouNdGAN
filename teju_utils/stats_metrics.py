@@ -70,6 +70,61 @@ def compute_tsne(real_cells, simulated_cells, random_seed=42):
     return real_embedding, fake_embedding
 
 
+def compute_lisi(
+    embedding: np.ndarray,
+    labels: np.ndarray,
+    perplexity: int = 30
+) -> np.ndarray:
+    """
+    Computes LISI scores for each point in an embedding.
+    Parameters:
+        embedding: np.ndarray of shape (n_samples, n_dims)
+            The 2D embedding (e.g., UMAP) of cells.
+        labels: np.ndarray of shape (n_samples,)
+            Array with category labels (e.g., 'real' or 'simulated').
+        perplexity: int
+            Approximate size of local neighborhood.
+    Returns:
+        np.ndarray of shape (n_samples,)
+            LISI score for each cell.
+    """
+    n_neighbors = int(perplexity * 3)  # suggested for LISI: ~3×perplexity
+    knn = NearestNeighbors(n_neighbors=n_neighbors).fit(embedding)
+    dists, indices = knn.kneighbors(embedding)
+
+    lisi_scores = np.zeros(embedding.shape[0])
+    for i, neighbors in enumerate(indices):
+        neighbor_labels = labels[neighbors]
+        label_counts = np.unique(neighbor_labels, return_counts=True)[1]
+        proportions = label_counts / label_counts.sum()
+        inverse_simpson = 1.0 / np.sum(proportions ** 2)
+        lisi_scores[i] = inverse_simpson
+        
+
+    return lisi_scores
+
+def compute_milisi(real_cells: np.ndarray, simulated_cells: np.ndarray, perplexity: int = 10, random_seed: int = 42, bootstrap: int = 5) -> float:
+    """
+    Computes the mean iLISI (miLISI) score.
+    Returns:
+        float
+            The mean LISI score across all cells.
+    """
+   
+    def metric(real_cells, simulated_cells):
+        real_embedding, fake_embedding = compute_tsne(real_cells, simulated_cells, random_seed=42)
+        # Concatenate embeddings
+        combined_embedding = np.vstack([real_embedding, fake_embedding])
+        
+        # Create label array: 'real' for first N, 'simulated' for rest
+        labels = np.array(['real'] * len(real_embedding) + ['simulated'] * len(fake_embedding))
+    
+        lisi_scores = compute_lisi(combined_embedding, labels, perplexity=perplexity)
+        return lisi_scores
+        
+    lisi_scores = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric)
+    return np.mean(lisi_scores)
+
 
 
 def compute_pairwise_distance(real_cells, simulated_cells, random_seed=42, bootstrap=5):
