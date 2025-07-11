@@ -1,0 +1,19 @@
+Baselines
+
+DeepSEM: ran on wk3
+github: git@github.com:HantaoShu/DeepSEM.git
+conda activate deepsem
+cd DeepSEM
+python main.py --task non_celltype_GRN --data_file /home/teju/Documents/Projects/DeepSEM/data_processed/COVID/CrossVal_1000/COVID_Haniffa21-hvg1000_train.h5ad --save_name results/COVID_1 --setting test
+
+
+PIDC: ran locally (start docker first)
+github: https://github.com/AdrianSeguraOrtiz/MO-GENECI/tree/main/geneci
+pip install geneci==3.0.1
+conda activate geneci
+geneci infer-network --expression-data data/processed/COVID_Haniffa21-hvg1000/CrossVal_1000/COVID_Haniffa21-hvg1000_train.csv --technique PIDC --output-dir inferred_networks
+
+
+All other experiments runs on login.css.cispa
+check: ./scripts/cispa_slurm_scripts/how.txt
+
