@@ -33,7 +33,7 @@ def calculate_perc_zeros(data):
     return percentage_zeros
 
 
-def compute_tsne(real_cells, simulated_cells, random_seed=42):
+def compute_tsne(real_cells, simulated_cells, random_seed=42, min_size=None):
     def metric(real_cells, simulated_cells):
         embedded_cells = TSNE().fit_transform(
                 np.concatenate((real_cells, simulated_cells), axis=0)
@@ -52,7 +52,8 @@ def compute_tsne(real_cells, simulated_cells, random_seed=42):
     np.random.seed(random_seed)
     real_size=real_cells.shape[0]
     simulated_size=simulated_cells.shape[0]
-    min_size=min(real_size, simulated_size)
+    if min_size is None:
+        min_size=min(real_size, simulated_size)
 
     if real_size == simulated_size == min_size:
         real_embedding, fake_embedding = metric(real_cells, simulated_cells)
@@ -103,7 +104,7 @@ def compute_lisi(
 
     return lisi_scores
 
-def compute_milisi(real_cells: np.ndarray, simulated_cells: np.ndarray, perplexity: int = 10, random_seed: int = 42, bootstrap: int = 5) -> float:
+def compute_milisi(real_cells: np.ndarray, simulated_cells: np.ndarray, perplexity: int = 10, random_seed: int = 42, bootstrap: int = 5, min_size: int = None) -> float:
     """
     Computes the mean iLISI (miLISI) score.
     Returns:
@@ -122,12 +123,12 @@ def compute_milisi(real_cells: np.ndarray, simulated_cells: np.ndarray, perplexi
         lisi_scores = compute_lisi(combined_embedding, labels, perplexity=perplexity)
         return lisi_scores
         
-    lisi_scores = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric)
+    lisi_scores = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric, min_size=min_size)
     return np.mean(lisi_scores)
 
 
 
-def compute_pairwise_distance(real_cells, simulated_cells, random_seed=42, bootstrap=5):
+def compute_pairwise_distance(real_cells, simulated_cells, random_seed=42, bootstrap=5, min_size=None):
 
     def metric(real_cells, simulated_cells):
         # minmax = MinMaxScaler()
@@ -147,10 +148,10 @@ def compute_pairwise_distance(real_cells, simulated_cells, random_seed=42, boots
     if type(simulated_cells) == str:
         simulated_cells =get_array(sc.read_h5ad(simulated_cells))
 
-    score = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric)
+    score = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric, min_size=min_size)
     return score
 
-def do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric):
+def do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric, min_size=None):
     if type(real_cells) == str:
         real_cells =get_array(sc.read_h5ad(real_cells))
     
@@ -160,33 +161,44 @@ def do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric):
     np.random.seed(random_seed)
     real_size=real_cells.shape[0]
     simulated_size=simulated_cells.shape[0]
-    min_size=min(real_size, simulated_size)
+    # print(min_size)
+    if min_size is None:
+        min_size=min(real_size, simulated_size)
+        if real_size == simulated_size == min_size:
+            score = metric(real_cells, simulated_cells)
+
+        elif real_cells.shape[0] != min_size:
+            # do sampling
+            scores=[]
+            
+            for i in range(bootstrap):
+                randint = np.random.randint(0, real_size, min_size)
+                score = metric(real_cells[randint], simulated_cells)
+                scores.append(score)
+            
+            score = sum(scores)/len(scores)
+
+        else:
+            scores=[]
+            for i in range(bootstrap):
+                randint = np.random.randint(0, simulated_size, min_size)
+                score = metric(real_cells, simulated_cells[randint])
+                scores.append(score)
+            
+            score = sum(scores)/len(scores)
     
-    if real_size == simulated_size == min_size:
-        score = metric(real_cells, simulated_cells)
-
-    elif real_cells.shape[0] != min_size:
-        # do sampling
-        scores=[]
-        
-        for i in range(bootstrap):
-            randint = np.random.randint(0, real_size, min_size)
-            score = metric(real_cells[randint], simulated_cells)
-            scores.append(score)
-        
-        score = sum(scores)/len(scores)
-
     else:
         scores=[]
         for i in range(bootstrap):
-            randint = np.random.randint(0, simulated_size, min_size)
-            score = metric(real_cells, simulated_cells[randint])
+            randint = np.random.randint(0, real_size, min_size)
+            score = metric(real_cells[randint], simulated_cells[randint])
             scores.append(score)
         
         score = sum(scores)/len(scores)
+    
     return score
 
-def compute_knn_distance(real_cells, simulated_cells, k=1,  random_seed=42, bootstrap=5):
+def compute_knn_distance(real_cells, simulated_cells, k=1,  random_seed=42, bootstrap=5, min_size=None):
     def metric(real_cells, simulated_cells):
         minmax = MinMaxScaler()
         minmax.fit(np.concatenate([real_cells, simulated_cells]))
@@ -201,13 +213,13 @@ def compute_knn_distance(real_cells, simulated_cells, k=1,  random_seed=42, boot
         # print(f"{k}-NN distance: {d_knn.mean()}")
         return d_knn.mean()
 
-    score = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric)
+    score = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric, min_size=min_size)
     
     return score
 
 
 
-def compute_cosine(real_cells, simulated_cells, random_seed=42, bootstrap=5):
+def compute_cosine(real_cells, simulated_cells, random_seed=42, bootstrap=5, min_size=None):
     def metric(real_cells, simulated_cells):
         centroid_real = np.mean(real_cells, axis=0)
         centroid_simulated = np.mean(simulated_cells, axis=0)
@@ -216,11 +228,11 @@ def compute_cosine(real_cells, simulated_cells, random_seed=42, bootstrap=5):
 
         # print(f'Cosine Distance: {cosine_dist}')
         return cosine_dist
-    score = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric)
+    score = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric, min_size=min_size)
     
     return score
 
-def compute_euclidean(real_cells, simulated_cells, random_seed=42, bootstrap=5):
+def compute_euclidean(real_cells, simulated_cells, random_seed=42, bootstrap=5, min_size=None):
     def metric(real_cells, simulated_cells):
         centroid_real = np.mean(real_cells, axis=0)
         centroid_simulated = np.mean(simulated_cells, axis=0)
@@ -230,7 +242,7 @@ def compute_euclidean(real_cells, simulated_cells, random_seed=42, bootstrap=5):
         # print(f'Euclidean Distance: {euclidean_dist}')
         return euclidean_dist
     
-    score = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric)
+    score = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric, min_size=min_size)
     
     return score
 
@@ -255,7 +267,7 @@ def sum_of_gaussian_kernels(X, Y, sigmas):
         K += gaussian_kernel(X, Y, sigma)
     return K
 
-def compute_mmd(X, Y, random_seed=42, bootstrap=5):
+def compute_mmd(X, Y, random_seed=42, bootstrap=5, min_size=None):
     def metric(X, Y):
         m = compute_median_distance(X)
         sigmas = [m / 0.5, m, m/2]
@@ -267,12 +279,12 @@ def compute_mmd(X, Y, random_seed=42, bootstrap=5):
         mmd = np.mean(Kxx) + np.mean(Kyy) - 2 * np.mean(Kxy)
         return mmd
     
-    score = do_bootstrap(X, Y, random_seed, bootstrap, metric)
+    score = do_bootstrap(X, Y, random_seed, bootstrap, metric, min_size=min_size)
     
     return score
 
 
-def compute_auroc_rf(real_cells, simulated_cells, random_seed=42, bootstrap=5):
+def compute_auroc_rf(real_cells, simulated_cells, random_seed=42, bootstrap=5, min_size=None):
     def metric(real_cells, simulated_cells):
         real_labels = np.ones(real_cells.shape[0])
         simulated_labels = np.zeros(simulated_cells.shape[0])
@@ -295,13 +307,13 @@ def compute_auroc_rf(real_cells, simulated_cells, random_seed=42, bootstrap=5):
         return auroc
 
     # Bootstrap the process for stability
-    score = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric)
+    score = do_bootstrap(real_cells, simulated_cells, random_seed, bootstrap, metric, min_size=min_size)
     return score
 
 
 def get_array(data):
     from scipy.sparse import issparse
-    if issparse(data):
+    if issparse(data.X):
         return data.X.toarray()
     else:
         return data.X
