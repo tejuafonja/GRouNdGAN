@@ -9,6 +9,7 @@ from gans.causal_gan import CausalGAN
 from gans.conditional_gan_cat import ConditionalCatGAN
 from gans.conditional_gan_proj import ConditionalProjGAN
 from gans.gan import GAN
+from dpmodels.dpgan_v2 import DPGAN
 
 
 def parse_list(str_list: str, type_: type) -> list:
@@ -269,6 +270,46 @@ class CausalGANFactory(IGANFactory):
         )[0]
 
 
+class DPGANFactory(IGANFactory):
+    def get_gan(self) -> DPGAN:
+        return DPGAN(
+            genes_no=self.parser.getint("Data", "number of genes"),
+            batch_size=self.parser.getint("Training", "batch size"),
+            latent_dim=self.parser.getint("Model", "latent dim"),
+            gen_layers=parse_list(self.parser["Model"]["generator layers"], int),
+            crit_layers=parse_list(self.parser["Model"]["critic layers"], int),
+            device=self.parser.get("EXPERIMENT", "device", fallback=None),
+            library_size=self.parser.getint("Preprocessing", "library size"),
+        )
+
+    def get_trainer(self) -> typing.Callable:
+        dpgan = self.get_gan()
+        return lambda: dpgan.train_group_dp(
+            train_files=self.parser.get("Data", "train"),
+            valid_files=self.parser.get("Data", "validation"),
+            critic_iter=self.parser.getint("Training", "critic iterations"),
+            c_lambda=self.parser.getfloat("Model", "lambda"),
+            beta1=self.parser.getfloat("Optimizer", "beta1"),
+            beta2=self.parser.getfloat("Optimizer", "beta2"),
+            gen_alpha_0=self.parser.getfloat("Learning Rate", "generator initial"),
+            gen_alpha_final=self.parser.getfloat("Learning Rate", "generator final"),
+            crit_alpha_0=self.parser.getfloat("Learning Rate", "critic initial"),
+            crit_alpha_final=self.parser.getfloat("Learning Rate", "critic final"),
+            eps=self.parser.getint("Privacy", "epsilon"),
+            delta=self.parser.getfloat("Privacy", "delta"),
+            max_norm=self.parser.getint("Privacy", "max_norm"),
+            groups_per_round=self.parser.getint("Privacy", "groups_per_round"),
+            total_round=self.parser.getint("Privacy", "total_round"),
+            max_steps_per_group=self.parser.getint("Privacy", "max_steps_per_group"),
+            crit_dp_mode=self.parser.get("Privacy", "crit_dp_mode"),
+            checkpoint=self.parser.get("EXPERIMENT", "checkpoint", fallback=None),
+            summary_freq=self.parser.getint("Logging", "summary frequency"),
+            plt_freq=self.parser.getint("Logging", "plot frequency"),
+            save_feq=self.parser.getint("Logging", "save frequency"),
+            output_dir=self.parser.get("EXPERIMENT", "output directory"),
+            nodp=self.parser.get("Privacy", "nodp"),
+        )
+
 def get_factory(cfg: ConfigParser) -> IGANFactory:
     """
     Return the factory for the GAN type based on 'model' key in the parser.
@@ -295,6 +336,7 @@ def get_factory(cfg: ConfigParser) -> IGANFactory:
         "proj conditional GAN": ConditionalProjGANFactory(cfg),
         "cat conditional GAN": ConditionalCatGANFactory(cfg),
         "causal GAN": CausalGANFactory(cfg),
+        "DP GAN": DPGANFactory(cfg),
     }
 
     if model in factories:
