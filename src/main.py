@@ -56,9 +56,24 @@ if __name__ == "__main__":
 
     if args.generate:
         n = int(cfg_parser.get("Generation", "number of times to generate"))
+
+        # edited by teju
+        real_cells = sc.read_h5ad(cfg_parser.get("Data", "train"))
+
+        num_gen_cells = cfg_parser.get("Generation", "number of cells to generate")
+        if num_gen_cells == 'test_size':
+            real_test_cells = sc.read_h5ad(cfg_parser.get("Data", "test"))
+            num_gen_cells = len(real_test_cells)
+        else:
+            try:
+                num_gen_cells = int(num_gen_cells)
+            except:
+                num_gen_cells = len(real_cells)
+
+        print(f"Generating: {num_gen_cells} cells")
         for i in range(n):
             simulated_cells = fac.get_gan().generate_cells(
-                int(cfg_parser.get("Generation", "number of cells to generate")),
+                num_gen_cells,
                 checkpoint=cfg_parser.get("EXPERIMENT", "checkpoint"),
             )
 
@@ -67,7 +82,6 @@ if __name__ == "__main__":
             simulated_cells.obs_names_make_unique()
 
             # edited by teju
-            real_cells = sc.read_h5ad(cfg_parser.get("Data", "train"))
             gene_names = real_cells.var_names.tolist()
             simulated_cells.var_names=gene_names
             
@@ -84,9 +98,22 @@ if __name__ == "__main__":
     
     if args.generate_cc:
         n = int(cfg_parser.get("Generation", "number of times to generate"))
+        # edited by teju
+        real_cells = sc.read_h5ad(cfg_parser.get("Data", "train"))
+        num_gen_cells = cfg_parser.get("Generation", "number of cells to generate")
+
+        if num_gen_cells == 'test_size':
+            real_test_cells = sc.read_h5ad(cfg_parser.get("Data", "test"))
+            num_gen_cells = len(real_test_cells)
+        else:
+            try:
+                num_gen_cells = int(num_gen_cells)
+            except:
+                num_gen_cells = len(real_cells)
+
         for i in range(n):
             simulated_cells = fac.get_cc().generate_cells(
-                int(cfg_parser.get("Generation", "number of cells to generate")),
+                num_gen_cells,
                 checkpoint=cfg_parser.get("EXPERIMENT", "checkpoint"),
             )
 
@@ -95,7 +122,6 @@ if __name__ == "__main__":
             simulated_cells.obs_names_make_unique()
 
             # edited by teju
-            real_cells = sc.read_h5ad(cfg_parser.get("Data", "train"))
             gene_names = real_cells.var_names.tolist()
             simulated_cells.var_names=gene_names
 

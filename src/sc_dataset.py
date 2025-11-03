@@ -5,9 +5,11 @@ import scanpy as sc
 import torch
 from torch.utils.data import DataLoader, Dataset
 from scipy.sparse import issparse
+import anndata
 
 class SCDataset(Dataset):
-    def __init__(self, path: typing.Union[str, bytes, os.PathLike]) -> None:
+    def __init__(self, path: typing.Union[str, bytes, os.PathLike, anndata._core.anndata.AnnData
+]) -> None:
         """
         Create a dataset from the h5ad processed data. Use the
         preprocessing/preprocess.py script to create the h5ad train,
@@ -18,23 +20,39 @@ class SCDataset(Dataset):
         path : typing.Union[str, bytes, os.PathLike]
             Path to the h5ad file.
         """
-        self.data = sc.read_h5ad(path)
-        
+
+        if type(path) == str:
+            self.data = sc.read_h5ad(path)
+        else:
+            self.data = path 
+            
         if issparse(self.data.X):
             self.data.X = self.data.X.toarray()
 
+        try:
+            self.cells = torch.from_numpy(self.data.X)
+        except:
+            # for some weird reason, the data.X is not overwritten
+            self.cells = torch.from_numpy(self.data.X.toarray())
         
         try:    
-            self.cells = torch.from_numpy(self.data.X)
+            # self.cells = torch.from_numpy(self.data.X)
             self.clusters = torch.from_numpy(
                 self.data.obs.cluster.to_numpy(dtype=int)
             )
         except:
             # added by teju
-            self.cells = torch.from_numpy(self.data.X.astype('float32'))
-            self.clusters = torch.from_numpy(
-                self.data.obs['RNA_snn_res.0.4'].to_numpy(dtype=int)
-            )
+            # for dataset that don't use groundgan preprocessing.
+            # self.cells = torch.from_numpy(self.data.X.astype('float32'))
+            try:
+                self.clusters = torch.from_numpy(
+                    self.data.obs['RNA_snn_res.0.4'].to_numpy(dtype=int)
+                )
+            except:
+                self.clusters = torch.from_numpy(
+                    self.data.obs['leiden'].to_numpy(dtype=int)
+                )
+
             # 
         # RNA_snn_res.0.4
 

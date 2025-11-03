@@ -280,18 +280,33 @@ class GAN:
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
         # import pdb; pdb.set_trace()
-        torch.save(
-            {
-                "step": self.step,
-                "generator_state_dict": self.gen.module.state_dict(),
-                "critic_state_dict": self.crit.module.state_dict(),
-                "generator_optimizer_state_dict": self.gen_opt.state_dict(),
-                "critic_optimizer_state_dict": self.crit_opt.state_dict(),
-                "generator_lr_scheduler": self.gen_lr_scheduler.state_dict(),
-                "critic_lr_scheduler": self.crit_lr_scheduler.state_dict(),
-            },
-            f"{path}/checkpoints/step_{self.step}.pth",
-        )
+        try:
+
+            torch.save(
+                {
+                    "step": self.step,
+                    "generator_state_dict": self.gen.module.state_dict(),
+                    "critic_state_dict": self.crit.module.state_dict(),
+                    "generator_optimizer_state_dict": self.gen_opt.state_dict(),
+                    "critic_optimizer_state_dict": self.crit_opt.state_dict(),
+                    "generator_lr_scheduler": self.gen_lr_scheduler.state_dict(),
+                    "critic_lr_scheduler": self.crit_lr_scheduler.state_dict(),
+                },
+                f"{path}/checkpoints/step_{self.step}.pth",
+            )
+        except:
+            torch.save(
+                {
+                    "step": self.step,
+                    "generator_state_dict": self.gen.state_dict(),
+                    "critic_state_dict": self.crit.state_dict(),
+                    "generator_optimizer_state_dict": self.gen_opt.state_dict(),
+                    "critic_optimizer_state_dict": self.crit_opt.state_dict(),
+                    "generator_lr_scheduler": self.gen_lr_scheduler.state_dict(),
+                    "critic_lr_scheduler": self.crit_lr_scheduler.state_dict(),
+                },
+                f"{path}/checkpoints/step_{self.step}.pth",
+            )
 
     def _load(
         self,
@@ -655,6 +670,7 @@ class GAN:
 
         # We only accept training on GPU since training on CPU is impractical.
         self.device = "cuda"
+
         self.gen = torch.nn.DataParallel(self.gen)
         self.crit = torch.nn.DataParallel(self.crit)
 
