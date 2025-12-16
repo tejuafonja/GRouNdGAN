@@ -9,7 +9,7 @@ from gans.causal_gan import CausalGAN
 from gans.conditional_gan_cat import ConditionalCatGAN
 from gans.conditional_gan_proj import ConditionalProjGAN
 from gans.gan import GAN
-from dpmodels.dpgan_v2 import DPGAN
+from dpmodels.dpgan import DPGAN
 
 
 def parse_list(str_list: str, type_: type) -> list:
