@@ -21,6 +21,8 @@ class SCDataset(Dataset):
             Path to the h5ad file.
         """
 
+        print(path)
+
         if type(path) == str:
             self.data = sc.read_h5ad(path)
         else:
@@ -49,9 +51,19 @@ class SCDataset(Dataset):
                     self.data.obs['RNA_snn_res.0.4'].to_numpy(dtype=int)
                 )
             except:
-                self.clusters = torch.from_numpy(
-                    self.data.obs['leiden'].to_numpy(dtype=int)
-                )
+                # ugly I know, but somewhere in the groundgan pipeline, it does expects to return tuple of data,cluster.
+                try:
+                    self.clusters = torch.from_numpy(
+                        self.data.obs['leiden'].to_numpy(dtype=int)
+                    )
+                except:
+                    # cluster assuming self.data has other object lovain needs. This is a workaround and is not ideal. This is why there is a preprocessing step.
+                    ann_clustered = self.data.copy()
+                    sc.tl.louvain(ann_clustered, resolution=0.15)
+                    self.data.obs["cluster"] = ann_clustered.obs["louvain"]
+                    self.clusters = torch.from_numpy(
+                        self.data.obs.cluster.to_numpy(dtype=int)
+                    )
 
             # 
         # RNA_snn_res.0.4
