@@ -7,11 +7,13 @@
 #SBATCH --mail-user=tejumade.afonja@cispa.de
 #SBATCH --mail-type=FAIL,END
 #SBATCH --time 120:00:00
-#SBATCH --exclude=xe8545-a100-09,xe8545-a100-29,xe8545-a100-30
+#SBATCH --exclude=xe8545-a100-09,xe8545-a100-29,xe8545-a100-30,xe8545-a100-06,xe8545-a100-11,xe8545-a100-02
 
 CONFIG_PATH=$1
 echo "Running training on ${CONFIG_PATH}"
 
 cd /home/c01teaf/CISPA-az6/llm_tg-2024/GRouNdGAN/
+
+pip3.9 install -U "anndata==0.10.5.post1"
 
 python3.9 src/main.py --config $CONFIG_PATH --train

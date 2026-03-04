@@ -2,9 +2,9 @@
 
 # GPT4.1 DeepSEM GPT4 GRNB2_Random GRNB2 Llama GRNB2_Bottom PIDC
 
-for GRN in GRNB2
+for GRN in GPT-OSS-20B-with-tools GPT-OSS-20B
 do
-    for DATASET in COVID_Haniffa21
+    for DATASET in PBMC 
     do
         for CV in 1000
         do

@@ -10,6 +10,7 @@ from gans.conditional_gan_cat import ConditionalCatGAN
 from gans.conditional_gan_proj import ConditionalProjGAN
 from gans.gan import GAN
 from dpmodels.dpgan import DPGAN
+from dpmodels.dpcausalgan import DPCausalGAN
 
 
 def parse_list(str_list: str, type_: type) -> list:
@@ -310,6 +311,112 @@ class DPGANFactory(IGANFactory):
             nodp=self.parser.get("Privacy", "nodp"),
         )
 
+class DPCausalGANFactory(IGANFactory):
+    def get_cc(self) -> GAN:
+        return GAN(
+            genes_no=self.parser.getint("Data", "number of genes"),
+            batch_size=self.parser.getint("CC Training", "batch size"),
+            latent_dim=self.parser.getint("CC Model", "latent dim"),
+            gen_layers=parse_list(self.parser["CC Model"]["generator layers"], int),
+            crit_layers=parse_list(self.parser["CC Model"]["critic layers"], int),
+            device=self.parser.get("EXPERIMENT", "device", fallback=None),
+            library_size=self.parser.getint("Preprocessing", "library size"),
+        )
+    def get_gan(self) -> DPCausalGAN:
+        with open(self.parser.get("Data", "causal graph"), "rb") as fp:
+            causal_graph = pickle.load(fp)
+        
+        # Modified, get pretrained CC model
+        cc_pretrained_checkpoint = self.parser.get("EXPERIMENT", "cc_pretrained_checkpoint")
+        if cc_pretrained_checkpoint is None:
+            cc_pretrained_checkpoint=self.parser.get("EXPERIMENT", "output directory") + f"_CC/checkpoints/step_{self.parser.getint('CC Training', 'maximum steps')}.pth"
+        # @Teju
+        return DPCausalGAN(
+            genes_no=self.parser.getint("Data", "number of genes"),
+            batch_size=self.parser.getint("Training", "batch size"),
+            latent_dim=self.parser.getint("Model", "latent dim"),
+            noise_per_gene=self.parser.getint("Model", "noise per gene"),
+            depth_per_gene=self.parser.getint("Model", "depth per gene"),
+            width_per_gene=self.parser.getint("Model", "width per gene"),
+            cc_latent_dim=self.parser.getint("CC Model", "latent dim"),
+            cc_layers=parse_list(self.parser["CC Model"]["generator layers"], int),
+            # cc_pretrained_checkpoint=self.parser.get("EXPERIMENT", "output directory")
+            # + f"_CC/checkpoints/step_{self.parser.getint('CC Training', 'maximum steps')}.pth",
+            cc_pretrained_checkpoint=cc_pretrained_checkpoint,
+            crit_layers=parse_list(self.parser["Model"]["critic layers"], int),
+            causal_graph=causal_graph,
+            labeler_layers=parse_list(self.parser["Model"]["labeler layers"], int),
+            device=self.parser.get("EXPERIMENT", "device", fallback=None),
+            library_size=self.parser.getint("Preprocessing", "library size"),
+        )
+    def get_trainer(self) -> typing.Callable:
+        cc = self.get_cc()
+        cc_pretrained_checkpoint=self.parser.get("EXPERIMENT", "cc_pretrained_checkpoint")
+        
+        # the following lambda will train the causal controller for maximum steps
+        # specified in the CC Training section of the config file
+        # after training the causal controller, the causal GAN will be instantiated
+        # with the pretrained causal controller and training will start.
+        return lambda: (
+            cc.train(
+                train_files=self.parser.get("Data", "train"),
+                valid_files=self.parser.get("Data", "validation"),
+                critic_iter=self.parser.getint("CC Training", "critic iterations"),
+                max_steps=self.parser.getint("CC Training", "maximum steps"),
+                c_lambda=self.parser.getfloat("CC Model", "lambda"),
+                beta1=self.parser.getfloat("CC Optimizer", "beta1"),
+                beta2=self.parser.getfloat("CC Optimizer", "beta2"),
+                gen_alpha_0=self.parser.getfloat(
+                    "CC Learning Rate", "generator initial"
+                ),
+                gen_alpha_final=self.parser.getfloat(
+                    "CC Learning Rate", "generator final"
+                ),
+                crit_alpha_0=self.parser.getfloat("CC Learning Rate", "critic initial"),
+                crit_alpha_final=self.parser.getfloat(
+                    "CC Learning Rate", "critic final"
+                ),
+                checkpoint=self.parser.get("EXPERIMENT", "checkpoint", fallback=None),
+                summary_freq=self.parser.getint("CC Logging", "summary frequency"),
+                plt_freq=self.parser.getint("CC Logging", "plot frequency"),
+                save_feq=self.parser.getint("CC Logging", "save frequency"),
+                output_dir=self.parser.get("EXPERIMENT", "output directory") + "_CC",
+            ) if cc_pretrained_checkpoint is None else None,
+            self.get_gan().train_group_dp(
+                train_files=self.parser.get("Data", "train"),
+                valid_files=self.parser.get("Data", "validation"),
+                critic_iter=self.parser.getint("Training", "critic iterations"),
+                # max_steps=self.parser.getint("Training", "maximum steps"),
+                c_lambda=self.parser.getfloat("Model", "lambda"),
+                beta1=self.parser.getfloat("Optimizer", "beta1"),
+                beta2=self.parser.getfloat("Optimizer", "beta2"),
+                gen_alpha_0=self.parser.getfloat("Learning Rate", "generator initial"),
+                gen_alpha_final=self.parser.getfloat(
+                    "Learning Rate", "generator final"
+                ),
+                crit_alpha_0=self.parser.getfloat("Learning Rate", "critic initial"),
+                crit_alpha_final=self.parser.getfloat("Learning Rate", "critic final"),
+                labeler_alpha=self.parser.getfloat("Learning Rate", "labeler"),
+                antilabeler_alpha=self.parser.getfloat("Learning Rate", "antilabeler"),
+                labeler_training_interval=self.parser.getfloat(
+                    "Training", "labeler and antilabeler training intervals"
+                ),
+                checkpoint=self.parser.get("EXPERIMENT", "checkpoint", fallback=None),
+                summary_freq=self.parser.getint("Logging", "summary frequency"),
+                plt_freq=self.parser.getint("Logging", "plot frequency"),
+                save_feq=self.parser.getint("Logging", "save frequency"),
+                output_dir=self.parser.get("EXPERIMENT", "output directory"),
+                eps=self.parser.getint("Privacy", "epsilon"),
+                delta=self.parser.getfloat("Privacy", "delta"),
+                max_norm=self.parser.getint("Privacy", "max_norm"),
+                groups_per_round=self.parser.getint("Privacy", "groups_per_round"),
+                total_round=self.parser.getint("Privacy", "total_round"),
+                max_steps_per_group=self.parser.getint("Privacy", "max_steps_per_group"),
+                crit_dp_mode=self.parser.get("Privacy", "crit_dp_mode"),
+                nodp=self.parser.get("Privacy", "nodp"),
+                ),
+            )[0]
+
 def get_factory(cfg: ConfigParser) -> IGANFactory:
     """
     Return the factory for the GAN type based on 'model' key in the parser.
@@ -337,6 +444,7 @@ def get_factory(cfg: ConfigParser) -> IGANFactory:
         "cat conditional GAN": ConditionalCatGANFactory(cfg),
         "causal GAN": CausalGANFactory(cfg),
         "DP GAN": DPGANFactory(cfg),
+        "DP causal GAN": DPCausalGANFactory(cfg),
     }
 
     if model in factories:

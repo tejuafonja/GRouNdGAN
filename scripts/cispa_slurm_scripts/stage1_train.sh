@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for DATASET in COVID_Haniffa21-hvg1000
+for DATASET in COVID_Haniffa21-swarm-node1-covid COVID_Haniffa21-swarm-node1-healthy COVID_Haniffa21-swarm-node2-covid COVID_Haniffa21-swarm-node2-healthy COVID_Haniffa21-GGpp-healthy COVID_Haniffa21-GGpp-covid
 do
     for CV in 1000
     do

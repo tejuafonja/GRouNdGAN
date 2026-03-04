@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../../CISPA-home/job_logs"
+		},
+		{
+			"path": "../../../TabDPO"
+		},
+		{
+			"path": "../../../Private-DM"
+		}
+	],
+	"settings": {}
+}

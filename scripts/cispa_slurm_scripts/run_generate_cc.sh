@@ -13,4 +13,6 @@ echo "Running generation on ${CONFIG_PATH}"
 
 cd /home/c01teaf/CISPA-az6/llm_tg-2024/GRouNdGAN/
 
+pip3.9 install -U "anndata==0.10.5.post1"
+
 python3.9 src/main.py --config $CONFIG_PATH --generate_cc
