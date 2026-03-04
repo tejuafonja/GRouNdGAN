@@ -279,19 +279,19 @@ class DPGAN(GAN):
         def should_run(freq, round):
             return freq > 0 and round % freq == 0 and self.step > 0
 
-        self.gen_opt = torch.optim.AdamW(
-            filter(lambda p: p.requires_grad, self.gen.parameters()),
-            lr=gen_alpha_0,  
-            betas=(beta1, beta2),
-            amsgrad=True
-        )
+        # self.gen_opt = torch.optim.AdamW(
+        #     filter(lambda p: p.requires_grad, self.gen.parameters()),
+        #     lr=gen_alpha_0,  
+        #     betas=(beta1, beta2),
+        #     amsgrad=True
+        # )
 
-        self.crit_opt = torch.optim.AdamW(
-            self.crit.parameters(),
-            lr=crit_alpha_0,
-            betas=(beta1, beta2),
-            amsgrad=True,
-        )
+        # self.crit_opt = torch.optim.AdamW(
+        #     self.crit.parameters(),
+        #     lr=crit_alpha_0,
+        #     betas=(beta1, beta2),
+        #     amsgrad=True,
+        # )
 
         for t in range(total_round):
             print(f"--- Starting Round {t} ---")
@@ -435,7 +435,7 @@ class DPGAN(GAN):
                                     )         
                     # Compute average of aggregated (clipping, add noise)
                     # # NOTE: Uses groups_per_round as denominator, which is an assumption for DP-FedAvg style.
-   
+                    
                     noisy_average_delta_w_gen = (Agg_clipped_delta_w_gen + noise_vec_gen) / float(groups_per_round)
                     wT_gen = wt_gen + noisy_average_delta_w_gen
                     vector_to_parameters(wT_gen.detach().clone(), self.gen.parameters())
